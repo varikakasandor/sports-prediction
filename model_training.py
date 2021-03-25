@@ -28,7 +28,7 @@ class DateTransformer(BaseEstimator, TransformerMixin):
     def transform(self, X, y=None):
         # Numerical features to pass down the numerical pipeline
         X_=X.copy()
-        X_["date"]=X_["date"]=X_["date"].apply(lambda d:int(d[0:4]+d[5:7]+d[8:10]))
+        X_["date"]=X_["date"].apply(lambda d:float(d[0:4]+d[5:7]+d[8:10]))
         return X_
 
 
@@ -38,7 +38,7 @@ def model_training():
     X=df[["date","home_team","away_team","country","neutral"]]
     y=df[["home_score","away_score"]]
     X_train, X_valid, y_train, y_valid = train_test_split(X, y, train_size=0.75)
-    input_shape=(3+len(X_train["home_team"].unique())+len(X_train["away_team"].unique()),)
+    input_shape=[2+len(X_train["home_team"].unique())+len(X_train["away_team"].unique())]
 
     def create_model():
         neuralnet = keras.Sequential([
@@ -46,29 +46,39 @@ def model_training():
             layers.Dense(512, activation='relu'),
             layers.Dense(2),
         ])
-        neuralnet.compile(loss='mae',optimizer='adam', metrics=['mse','accuracy'])
+        neuralnet.compile(loss='mae',optimizer=keras.optimizers.Adam(learning_rate=0.01), metrics=['mse','accuracy'])
         return neuralnet
 
-    model = KerasRegressor(build_fn=create_model,verbose=0)
+    model = KerasRegressor(build_fn=create_model, epochs=10, batch_size=20, verbose=1)
 
     preprocessor = ColumnTransformer(
         transformers=[
-            ('date', DateTransformer()),
             ('date_scale',StandardScaler(),['date']),
             ('neutral', OrdinalEncoder(),['neutral']),
-            ('opponents',OneHotEncoder(handle_unknown='ignore'),['home_team','away_team'])
+            ('home',OneHotEncoder(handle_unknown='ignore', sparse=False),['home_team']),
+            ('away',OneHotEncoder(handle_unknown='ignore', sparse=False),['away_team'])
         ])
 
     pipeline = Pipeline(steps=[
+        ('date',DateTransformer()),
         ('pre',preprocessor),
         ('model',model)
     ])
 
+    """print(len(X_train["home_team"].unique()))
+    print(len(X_train["away_team"].unique()))
+    X_train=DateTransformer().fit_transform(X_train)
+    X_train=preprocessor.fit_transform(X_train)
+    print(X_train.shape)"""
 
+    print("Ready for fitting")
     pipeline.fit(X_train, y_train)
+    print("Fitting done")
     joblib.dump(pipeline, 'initial_model.joblib')
-
+    print("Dumping done")
+    print("Ready for prediction")
     preds = pipeline.predict(X_valid)
+    print("Prediction done")
     score = mean_absolute_error(y_valid, preds)
     print('MAE:', score)
 
