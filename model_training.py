@@ -8,7 +8,8 @@ from tensorflow.keras import layers
 from keras.models import Sequential
 from keras.wrappers.scikit_learn import KerasRegressor
 
-import joblib
+#import joblib
+import pickle
 
 from sklearn.model_selection import train_test_split
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -49,7 +50,7 @@ def model_training():
         neuralnet.compile(loss='mae',optimizer=keras.optimizers.Adam(learning_rate=0.01), metrics=['mse','accuracy'])
         return neuralnet
 
-    model = KerasRegressor(build_fn=create_model, epochs=10, batch_size=20, verbose=1)
+    model = KerasRegressor(build_fn=create_model, epochs=15, batch_size=64, verbose=1)
 
     preprocessor = ColumnTransformer(
         transformers=[
@@ -63,23 +64,15 @@ def model_training():
         ('date',DateTransformer()),
         ('pre',preprocessor),
         ('model',model)
-    ])
+    ], verbose=True)
 
-    """print(len(X_train["home_team"].unique()))
-    print(len(X_train["away_team"].unique()))
-    X_train=DateTransformer().fit_transform(X_train)
-    X_train=preprocessor.fit_transform(X_train)
-    print(X_train.shape)"""
-
-    print("Ready for fitting")
     pipeline.fit(X_train, y_train)
-    print("Fitting done")
-    joblib.dump(pipeline, 'initial_model.joblib')
-    print("Dumping done")
-    print("Ready for prediction")
+    #model.model.save("First_Model")
     preds = pipeline.predict(X_valid)
-    print("Prediction done")
     score = mean_absolute_error(y_valid, preds)
+    print(X_valid)
+    print(preds)
+    print(y_valid)
     print('MAE:', score)
 
 if(__name__=="__main__"):
