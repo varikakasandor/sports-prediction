@@ -20,7 +20,7 @@ def model_training():
     df=pd.read_csv("results.csv")
     X=df[["date","home_team","away_team","country","neutral"]]
     y=df[["home_score","away_score"]]
-    X_train, X_valid, y_train, y_valid = train_test_split(X, y, train_size=0.75)
+    X_train, X_valid, y_train, y_valid = train_test_split(X, y, train_size=0.80)
 
     preprocessor = ColumnTransformer(
         transformers=[
@@ -44,7 +44,7 @@ def model_training():
         layers.Dense(512, activation='relu'),
         layers.Dense(2)
     ])
-    model.compile(loss='mse',optimizer=optimizers.Adam(learning_rate=0.01))#), metrics=['mse','accuracy'])
+    model.compile(loss='mse',optimizer=optimizers.Adam(learning_rate=0.01))
 
     early_stopping = callbacks.EarlyStopping(
         patience=5,
@@ -55,21 +55,19 @@ def model_training():
     history=model.fit(
         X_train, y_train,
         validation_data=(X_valid, y_valid),
-        epochs=1, batch_size=64,
+        epochs=500, batch_size=64,
         callbacks=[early_stopping],
         verbose=1)
 
+
     curr_dir=Path(__file__).resolve().parent
-    models.save_model(model,Path(curr_dir,'Saved Neural Network Models','early_stopping_model'))
-    joblib.dump(pipeline, Path(curr_dir,'Saved Fitted Preprocessing Pipelines','simple_pipeline.pkl')) 
-
-
-    preds = model.predict(X_valid)
-    score = mean_absolute_error(y_valid, preds)
-    print(X_valid)
-    print(preds)
-    print(y_valid)
-    print('MAE:', score)
+    with open("model_count.txt","r") as mc:
+        cnt=mc.read()
+        models.save_model(model,Path(curr_dir,'Saved Neural Network Models',f'model_{cnt}'))
+        joblib.dump(pipeline, Path(curr_dir,'Saved Fitted Preprocessing Pipelines',f'pipeline_{cnt}.pkl'))
+    with open("model_count.txt","w") as mc:
+        new_cnt=str(int(cnt)+1)
+        mc.write(new_cnt) 
 
 if(__name__=="__main__"):
     model_training()

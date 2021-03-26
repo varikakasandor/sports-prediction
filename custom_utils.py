@@ -14,3 +14,7 @@ class DateTransformer(BaseEstimator, TransformerMixin):
             X_=X.copy()
             X_["date"]=X_["date"].apply(lambda d:float(d[0:4]+d[5:7]+d[8:10]))
             return X_
+
+
+def create_integer_scores(arr):
+    return np.rint(arr).astype(int)
